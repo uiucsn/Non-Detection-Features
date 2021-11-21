@@ -1,26 +1,35 @@
-from _typeshed import Self
-import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
-class NonDetectionFeatures:
+class NDFeatureExtractor:
 
-    unifiedLightCurve = pd.DataFrame(columns=['passband' , 'flux', 'fluxError', 'detection', 'time'])
+    def __init__(self, dataFrame, survey):
 
-
-    def __init__(self, lcDict):
-
-        self.lcDict = lcDict
+        self.dataFrame = dataFrame
+        self.survey = survey
         
-    def collapseLightCurves(self):
+    def plotInstance(self):
 
-        # Going through each passband in the dictionary
-        for passband in self.lcDict.keys():
-            lc = self.lcDict[passband];
-            # Adding every detection and non detection to a dataframe
-            for i in len(lc):
-                detection = (lc.flux[i] / lc.error[i]) > 5
-                self.unifiedLightCurve.append([[passband, lc.flux[i], lc.error[i], detection, lc.time[i]]])
+        colors = self.passbandColors[self.survey]
+        colorArr = []
+        marker = []
 
-        # Sorting the dataframe by time
-        self.unifiedLightCurve.sort_values('time', ignore_index=True)
-    
+        # Creating an array of colors based on passband.
+        for passband in self.dataFrame['BAND']:
+            colorArr.append(colors[passband])
+
+        # Creating an array of markers based on whether the observation is a detection or not.
+        for det in self.dataFrame['PHOTFLAG']:
+            marker.append(u'o') if det == 0 else marker.append(u'^')
+
+        # Creating the scatter plot.
+        for i in range(len(self.dataFrame)):
+            plt.errorbar(self.dataFrame['MJD'][i], self.dataFrame['FLUXCAL'][i], yerr = self.dataFrame['FLUXCALERR'][i], fmt = marker[i], c = colorArr[i], label = self.dataFrame['BAND'][i])
+
+        plt.show()
+
+
+    # Data for internal use.
+    passbandColors = {
+        'LSST' : {'u ': 'tab:blue', 'g ': 'tab:orange', 'r ': 'tab:green', 'i ': 'tab:red', 'z ': 'tab:purple', 'Y ': 'tab:pink'},
+    }
