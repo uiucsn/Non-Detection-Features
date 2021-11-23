@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.core.numeric import NaN
 
 class NDFeatureExtractor:
 
@@ -62,9 +63,12 @@ class NDFeatureExtractor:
 
                 temp.append((flag, passband, signal, noise))
 
-
-            succeedingObservations.append(temp)
+            if len(temp) > 0:
+                succeedingObservations.append(temp)
         
+        if len(succeedingObservations) == 0:
+            succeedingObservations.append([(0, 'Invalid', 0, 0)])
+
         self.features['Succeeding Observations'] = succeedingObservations
         return succeedingObservations
     
@@ -91,9 +95,12 @@ class NDFeatureExtractor:
                 noise = self.dataFrame['FLUXCALERR'][j]
 
                 temp.append((flag, passband, signal, noise))
+            
+            if len(temp) > 0:
+                precceedingObservations.append(temp)
 
-
-            precceedingObservations.append(temp)
+        if len(precceedingObservations) == 0:
+            precceedingObservations.append([(0, 'Invalid', 0, 0)])
         
         self.features['Precceeding Observations'] = precceedingObservations
         return precceedingObservations
