@@ -1,4 +1,6 @@
 import numpy as np
+from numpy.core.defchararray import encode
+import pandas as pd
 import matplotlib.pyplot as plt
 from numpy.core.numeric import NaN
 
@@ -6,104 +8,106 @@ class NDFeatureExtractor:
 
     def __init__(self, dataFrame, survey):
 
-        self.dataFrame = dataFrame
+        self.dataFrame = dataFrame.to_pandas()
         self.survey = survey
         
     def extractDetectionData(self):
-        
-        detections = []
-        idx = np.where(self.dataFrame['PHOTFLAG'] != 0)
 
-        for i in idx:
+        detectionDataFrame = pd.DataFrame(columns = ['BAND', 'FLUXCAL', 'FLUXCALERR'])
 
-            passband = self.dataFrame['BAND'][i]
-            signal = self.dataFrame['FLUXCAL'][i]
-            noise = self.dataFrame['FLUXCALERR'][i]
-            
-            detections.append((passband, signal, noise))
+        # Indexes for the detections
+        boolArray = self.dataFrame['PHOTFLAG'] != 0
+        idx = np.where(boolArray)[0]
+
+        passband = np.array(self.dataFrame['BAND'][idx], dtype=np.str)
+        signal = np.array(self.dataFrame['FLUXCAL'][idx])
+        noise = np.array(self.dataFrame['FLUXCALERR'][idx])
+
+        detectionDataFrame  = detectionDataFrame.append({'BAND': passband, 'FLUXCAL': signal, 'FLUXCALERR': noise}, ignore_index=True)
         
-        self.features['Detection Data'] = detections
-        return detections
+        self.features['Detection Data'] = detectionDataFrame
+        return detectionDataFrame
     
     def extractTimeBetweenSucessiveDetections(self):
         
-        timeDeltas = []
-        idx = np.where(self.dataFrame['PHOTFLAG'] != 0)
+        timeDeltaDataFrame = pd.DataFrame(columns = ['Time Delta'])
 
+        # Indexes for the detections.
+        boolArray = self.dataFrame['PHOTFLAG'] != 0
+        idx = np.where(boolArray)[0]
+
+        # Only calculates time delta if there are more than one detections.
         if len(idx) > 1:
-            for i in range(1,idx):
+            for i in idx[1:]:
 
                 deltaTime = self.dataFrame['MJD'][i] - self.dataFrame['MJD'][i - 1]
-                timeDeltas.append(deltaTime)
+                timeDeltaDataFrame = timeDeltaDataFrame.append({'Time Delta': deltaTime}, ignore_index=True)
         
-        self.features['Time Delta'] = timeDeltas
-        return timeDeltas
-    
-    def extractSucceedingObservations(self, number = 1):
+        self.features['Time Delta'] = timeDeltaDataFrame
+        return timeDeltaDataFrame
 
-        succeedingObservations = []
-        idx = np.where(self.dataFrame['PHOTFLAG'] != 0)
-
-        for i in idx:
-            
-            temp = []
-
-            # Ensuring that the end index is less than len - 1
-            endIdx = i[0] + number
-            while endIdx >= len(self.dataFrame) - 1:
-                endIdx -= 1
-            
-            # Going through neigbouring observations
-            for j in range(i[0] + 1, endIdx + 1):
-                
-                flag = self.dataFrame['PHOTFLAG'][j]
-                passband = self.dataFrame['BAND'][j]
-                signal = self.dataFrame['FLUXCAL'][j]
-                noise = self.dataFrame['FLUXCALERR'][j]
-
-                temp.append((flag, passband, signal, noise))
-
-            if len(temp) > 0:
-                succeedingObservations.append(temp)
-        
-        if len(succeedingObservations) == 0:
-            succeedingObservations.append([(0, 'Invalid', 0, 0)])
-
-        self.features['Succeeding Observations'] = succeedingObservations
-        return succeedingObservations
-    
     def extractPrecceedingObservations(self, number = 1):
 
-        precceedingObservations = []
-        idx = np.where(self.dataFrame['PHOTFLAG'] != 0)
+        
+        # An array to hold all of the precceeding observations
+        arrayOfDataFrames = []
+
+        # Indexes for the detection
+        boolArray = self.dataFrame['PHOTFLAG'] != 0
+        idx = np.where(boolArray)[0]
 
         for i in idx:
-            
-            temp = []
 
             # Ensuring that the start index is greater than or equal to 0
-            startIdx = i[0] - number
+            startIdx = i - number
             while startIdx <= 0:
                 startIdx += 1
 
-            # Going through neigbouring observations
-            for j in range(startIdx, i[0]):
-                
-                flag = self.dataFrame['PHOTFLAG'][j]
-                passband = self.dataFrame['BAND'][j]
-                signal = self.dataFrame['FLUXCAL'][j]
-                noise = self.dataFrame['FLUXCALERR'][j]
+            flag = np.array(self.dataFrame['PHOTFLAG'][range(startIdx, i)])
+            passband = np.array(self.dataFrame['BAND'][range(startIdx, i)], dtype=np.str)
+            signal = np.array(self.dataFrame['FLUXCAL'][range(startIdx, i)])
+            noise = np.array(self.dataFrame['FLUXCALERR'][range(startIdx, i)])
 
-                temp.append((flag, passband, signal, noise))
-            
-            if len(temp) > 0:
-                precceedingObservations.append(temp)
+            # A dataframe to store the suceeding observations of a given. 
+            precceedingObservationsDataFrame = pd.DataFrame(columns = ['PHOTFLAG', 'BAND', 'FLUXCAL', 'FLUXCALERR'])
+            precceedingObservationsDataFrame = precceedingObservationsDataFrame.append({'PHOTFLAG': flag, 'BAND': passband, 'FLUXCAL': signal, 'FLUXCALERR': noise}, ignore_index=True)
 
-        if len(precceedingObservations) == 0:
-            precceedingObservations.append([(0, 'Invalid', 0, 0)])
+            arrayOfDataFrames.append(precceedingObservationsDataFrame)
         
-        self.features['Precceeding Observations'] = precceedingObservations
-        return precceedingObservations
+        self.features['Precceeding Observations'] = arrayOfDataFrames
+        return arrayOfDataFrames
+    
+    def extractSucceedingObservations(self, number = 1):
+        
+        # An array to hold all of the suceeding observations
+        arrayOfDataFrames = []
+
+        # Indexes for the detection
+        boolArray = self.dataFrame['PHOTFLAG'] != 0
+        idx = np.where(boolArray)[0]
+
+        for i in idx:
+
+            # Ensuring that the end index is less than len - 1
+            endIdx = i + number
+            while endIdx >= len(self.dataFrame) - 1:
+                endIdx -= 1
+            
+            flag = np.array(self.dataFrame['PHOTFLAG'][range(i + 1, endIdx + 1)])
+            passband = np.array(self.dataFrame['BAND'][range(i + 1, endIdx + 1)], dtype=np.str)
+            signal = np.array(self.dataFrame['FLUXCAL'][range(i + 1, endIdx + 1)])
+            noise = np.array(self.dataFrame['FLUXCALERR'][range(i + 1, endIdx + 1)])
+
+            # A dataframe to store the suceeding observations of a given. 
+            succeedingObservationsDataFrame = pd.DataFrame(columns = ['PHOTFLAG', 'BAND', 'FLUXCAL', 'FLUXCALERR'])
+            succeedingObservationsDataFrame = succeedingObservationsDataFrame.append({'PHOTFLAG': flag, 'BAND': passband, 'FLUXCAL': signal, 'FLUXCALERR': noise}, ignore_index=True)
+
+            arrayOfDataFrames.append(succeedingObservationsDataFrame)
+        
+        self.features['Succeeding Observations'] = arrayOfDataFrames
+        return arrayOfDataFrames
+    
+
     
     def getFeatures(self):
         return self.features
