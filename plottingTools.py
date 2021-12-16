@@ -8,7 +8,7 @@ from collections import Counter
 import pandas as pd
 
 
-def plotFirstDetectionPassbands(path, listFile, isCompressed):
+def plotDetectionPassbands(path, listFile, isCompressed):
     
     detectionPassband = np.array([])
 
@@ -141,13 +141,42 @@ def plotSuccessiveDetectionTimeDelta(path, listFile, isCompressed):
     plt.title('Distribution of post detection passbands ' + dirToClassName[path])
     plt.show()
 
+def plotSignalToNoiseRatio(path, listFile, isCompressed):
+    
+    signalToNoiseRatio = np.array([])
+
+    with open(path + listFile) as file:
+        count = 0
+        for line in file:
+
+            headFile = path + line.rstrip()
+            photFile = headFile[:len(headFile) - 9] + 'PHOT.FITS'
+
+            if isCompressed:
+                headFile += '.gz'
+                photFile += '.gz'
+            sim = sncosmo.read_snana_fits(headFile, photFile)
+
+            for table in sim:
+
+                fe = NDFeatures.NDFeatureExtractor(table, 'LSST')
+                signalToNoiseDF = fe.extractSignalToNoiseRatio()
+                signalToNoiseRatio = np.concatenate([signalToNoiseRatio, signalToNoiseDF['Signal to noise'].to_numpy()[0]])
+
+            break
+    # Plotting code
+    plt.hist(signalToNoiseRatio, bins=100)
+    plt.yscale('log')
+    plt.title('Distribution of signal to noise ratio ' + dirToClassName[path])
+    plt.show()
+
 dirToClassName = {
     'test_data/m-dwarf-flare-lightcurves/': 'M dwarf flares',
     'test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/': 'Kilo Nova',
 }
 
-# plotFirstDetectionPassbands('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
-# plotFirstDetectionPassbands('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
+# plotDetectionPassbands('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
+# plotDetectionPassbands('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
 
 # plotPreDetectionPassbands('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
 # plotPreDetectionPassbands('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
@@ -157,3 +186,6 @@ dirToClassName = {
 
 # plotSuccessiveDetectionTimeDelta('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
 # plotSuccessiveDetectionTimeDelta('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
+
+# plotSignalToNoiseRatio('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
+# plotSignalToNoiseRatio('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)

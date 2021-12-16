@@ -47,7 +47,6 @@ class NDFeatureExtractor:
         return timeDeltaDataFrame
 
     def extractPrecceedingObservations(self, number = 1):
-
         
         # An array to hold all of the precceeding observations
         arrayOfDataFrames = []
@@ -106,6 +105,20 @@ class NDFeatureExtractor:
         
         self.features['Succeeding Observations'] = arrayOfDataFrames
         return arrayOfDataFrames
+
+    def extractSignalToNoiseRatio(self, number = 1):
+        
+        # An array to hold all of the n/s ratios
+        signalToNoiseRatio = self.dataFrame['FLUXCAL'] / self.dataFrame['FLUXCALERR']
+        
+        passbands = np.array(self.dataFrame['BAND'], dtype=np.str)
+
+        # A dataframe to store alll the signal to noise ratios along with the passbands
+        signalToNoiseRatioDF = pd.DataFrame(columns = ['Signal to noise'])
+        signalToNoiseRatioDF = signalToNoiseRatioDF.append({'Signal to noise': signalToNoiseRatio, 'BAND': passbands}, ignore_index=True)
+
+        self.features['Succeeding Observations'] = signalToNoiseRatioDF
+        return signalToNoiseRatioDF
     
 
     
