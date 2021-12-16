@@ -3,6 +3,7 @@ from numpy.core.defchararray import encode
 import pandas as pd
 import matplotlib.pyplot as plt
 from numpy.core.numeric import NaN
+import lightkurve as lk
 
 class NDFeatureExtractor:
 
@@ -117,11 +118,29 @@ class NDFeatureExtractor:
         signalToNoiseRatioDF = pd.DataFrame(columns = ['Signal to noise'])
         signalToNoiseRatioDF = signalToNoiseRatioDF.append({'Signal to noise': signalToNoiseRatio, 'BAND': passbands}, ignore_index=True)
 
-        self.features['Succeeding Observations'] = signalToNoiseRatioDF
+        self.features['Signal to noise ratio'] = signalToNoiseRatioDF
         return signalToNoiseRatioDF
     
+    def buildPseudoLightCurves(self, SNThreshold = 3):
 
-    
+        dict = self.passbandColors[self.survey]
+
+        for band in dict.keys():
+
+            df = self.dataFrame[self.dataFrame['FLUXCAL'] / self.dataFrame['FLUXCALERR'] >= SNThreshold] 
+            df = df[df['BAND'].str.decode('utf-8') == band]
+
+            signal = df['FLUXCAL']
+            noise = df['FLUXCALERR']
+            time = df['MJD']
+
+            lc = lk.LightCurve(time = time, flux = signal, flux_err = noise)
+
+            self.pseudoPassBandLightCurves[band] = lc
+
+
+        return self.pseudoPassBandLightCurves
+
     def getFeatures(self):
         return self.features
 
@@ -144,9 +163,28 @@ class NDFeatureExtractor:
             plt.errorbar(self.dataFrame['MJD'][i], self.dataFrame['FLUXCAL'][i], yerr = self.dataFrame['FLUXCALERR'][i], fmt = marker[i], c = colorArr[i], label = self.dataFrame['BAND'][i])
 
         plt.show()
+    
+    def plotPseudoLightCurves(self, SNThreshold = 3):
+
+        self.buildPseudoLightCurves(SNThreshold=SNThreshold)
+
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot()
+
+        for band in self.passbandColors[self.survey].keys():
+            lc = self.pseudoPassBandLightCurves[band]
+            if len(lc) > 0:
+                ax.errorbar(lc.time.to_value('mjd'), lc.flux.to_value(), yerr = self.pseudoPassBandLightCurves[band].flux_err.to_value(),  label = band, marker='o')
+        
+        plt.legend()
+        plt.xlabel('Time in MJD')
+        plt.ylabel('Flux')
+        plt.show()
 
 
     features = {}
+
+    pseudoPassBandLightCurves = {}
 
     # Data for internal use.
     passbandColors = {

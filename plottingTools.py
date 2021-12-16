@@ -161,9 +161,9 @@ def plotSignalToNoiseRatio(path, listFile, isCompressed):
 
                 fe = NDFeatures.NDFeatureExtractor(table, 'LSST')
                 signalToNoiseDF = fe.extractSignalToNoiseRatio()
+                
                 signalToNoiseRatio = np.concatenate([signalToNoiseRatio, signalToNoiseDF['Signal to noise'].to_numpy()[0]])
 
-            break
     # Plotting code
     plt.hist(signalToNoiseRatio, bins=100)
     plt.yscale('log')
@@ -189,3 +189,4 @@ dirToClassName = {
 
 # plotSignalToNoiseRatio('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
 # plotSignalToNoiseRatio('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
+
