@@ -10,6 +10,7 @@ class NDFeatureExtractor:
     def __init__(self, dataFrame, survey):
 
         self.dataFrame = dataFrame.to_pandas()
+        self.dataFrame['BAND'] = np.array(self.dataFrame['BAND'], dtype=np.str)
         self.survey = survey
         
     def extractDetectionData(self):
@@ -20,11 +21,7 @@ class NDFeatureExtractor:
         boolArray = self.dataFrame['PHOTFLAG'] != 0
         idx = np.where(boolArray)[0]
 
-        passband = np.array(self.dataFrame['BAND'][idx], dtype=np.str)
-        signal = np.array(self.dataFrame['FLUXCAL'][idx])
-        noise = np.array(self.dataFrame['FLUXCALERR'][idx])
-
-        detectionDataFrame  = detectionDataFrame.append({'BAND': passband, 'FLUXCAL': signal, 'FLUXCALERR': noise}, ignore_index=True)
+        detectionDataFrame  = self.dataFrame.loc[idx, ]
         
         self.features['Detection Data'] = detectionDataFrame
         return detectionDataFrame
@@ -58,21 +55,15 @@ class NDFeatureExtractor:
 
         for i in idx:
 
-            # Ensuring that the start index is greater than or equal to 0
             startIdx = i - number
-            while startIdx <= 0:
+
+            # Ensuring that the start index is greater than or equal to 0
+            while startIdx < 0:
                 startIdx += 1
 
-            flag = np.array(self.dataFrame['PHOTFLAG'][range(startIdx, i)])
-            passband = np.array(self.dataFrame['BAND'][range(startIdx, i)], dtype=np.str)
-            signal = np.array(self.dataFrame['FLUXCAL'][range(startIdx, i)])
-            noise = np.array(self.dataFrame['FLUXCALERR'][range(startIdx, i)])
-
-            # A dataframe to store the suceeding observations of a given. 
-            precceedingObservationsDataFrame = pd.DataFrame(columns = ['PHOTFLAG', 'BAND', 'FLUXCAL', 'FLUXCALERR'])
-            precceedingObservationsDataFrame = precceedingObservationsDataFrame.append({'PHOTFLAG': flag, 'BAND': passband, 'FLUXCAL': signal, 'FLUXCALERR': noise}, ignore_index=True)
-
-            arrayOfDataFrames.append(precceedingObservationsDataFrame)
+            # A dataframe to store the suceeding observations of a given.
+            preceedingObservationsDataFrame  = self.dataFrame.loc[range(startIdx, i),]
+            arrayOfDataFrames.append(preceedingObservationsDataFrame)
         
         self.features['Precceeding Observations'] = arrayOfDataFrames
         return arrayOfDataFrames
@@ -88,20 +79,14 @@ class NDFeatureExtractor:
 
         for i in idx:
 
-            # Ensuring that the end index is less than len - 1
             endIdx = i + number
-            while endIdx >= len(self.dataFrame) - 1:
+
+            # Ensuring that the end index is less than len 
+            while endIdx >= len(self.dataFrame):
                 endIdx -= 1
-            
-            flag = np.array(self.dataFrame['PHOTFLAG'][range(i + 1, endIdx + 1)])
-            passband = np.array(self.dataFrame['BAND'][range(i + 1, endIdx + 1)], dtype=np.str)
-            signal = np.array(self.dataFrame['FLUXCAL'][range(i + 1, endIdx + 1)])
-            noise = np.array(self.dataFrame['FLUXCALERR'][range(i + 1, endIdx + 1)])
 
             # A dataframe to store the suceeding observations of a given. 
-            succeedingObservationsDataFrame = pd.DataFrame(columns = ['PHOTFLAG', 'BAND', 'FLUXCAL', 'FLUXCALERR'])
-            succeedingObservationsDataFrame = succeedingObservationsDataFrame.append({'PHOTFLAG': flag, 'BAND': passband, 'FLUXCAL': signal, 'FLUXCALERR': noise}, ignore_index=True)
-
+            succeedingObservationsDataFrame  = self.dataFrame.loc[range(i + 1, endIdx + 1),]
             arrayOfDataFrames.append(succeedingObservationsDataFrame)
         
         self.features['Succeeding Observations'] = arrayOfDataFrames
@@ -151,7 +136,7 @@ class NDFeatureExtractor:
         marker = []
 
         # Creating an array of colors based on passband.
-        for passband in self.dataFrame['BAND']:
+        for passband in np.array(self.dataFrame['BAND'], dtype=np.str):
             colorArr.append(colors[passband])
 
         # Creating an array of markers based on whether the observation is a detection or not.
@@ -161,7 +146,7 @@ class NDFeatureExtractor:
         # Creating the scatter plot.
         for i in range(len(self.dataFrame)):
             plt.errorbar(self.dataFrame['MJD'][i], self.dataFrame['FLUXCAL'][i], yerr = self.dataFrame['FLUXCALERR'][i], fmt = marker[i], c = colorArr[i], label = self.dataFrame['BAND'][i])
-
+        
         plt.show()
     
     def plotPseudoLightCurves(self, SNThreshold = 3):
@@ -181,9 +166,9 @@ class NDFeatureExtractor:
         plt.ylabel('Flux')
         plt.show()
 
-
     features = {}
 
+    # Storage for the pseudo light curves
     pseudoPassBandLightCurves = {}
 
     # Data for internal use.
