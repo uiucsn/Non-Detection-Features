@@ -1,5 +1,6 @@
 from datetime import time
 from numpy.core.defchararray import less_equal
+from numpy.core.fromnumeric import size
 import sncosmo
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +9,8 @@ from collections import Counter
 import pandas as pd
 import sklearn as sk
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+import collections
+
 
 def plotDetectionPassbands(path, listFile, isCompressed):
     
@@ -311,30 +314,47 @@ def convertToNumbers(passbandArray):
     
 def plotPrePost3dPlot():
 
-    
+    # Kilo nova data
     KnPre, KnDet, KnPost = getPrePostAndDetectionPassbands('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
     KnPre = convertToNumbers(KnPre)
     KnDet = convertToNumbers(KnDet)
     KnPost = convertToNumbers(KnPost)
 
+    KnTuples = []
+    for a, b, c in zip(KnPre, KnDet, KnPost):
+        KnTuples.append((a,b,c))
+
+    KnOccurrences = collections.Counter(KnTuples)
+    KnCount = sum(KnOccurrences.values())
+
+    # M dwarf flare data
     MdPre, MdDet, MdPost = getPrePostAndDetectionPassbands('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
     MdPre = convertToNumbers(MdPre)
     MdDet = convertToNumbers(MdDet)
     MdPost = convertToNumbers(MdPost)
 
+    MdTuples = []
+    for a, b, c in zip(MdPre, MdDet, MdPost):
+        MdTuples.append((a,b,c))
+
+    MdOccurrences = collections.Counter(MdTuples)
+    MdCount = sum(MdOccurrences.values())
+
     # Plotting code
 
-    # Creating figure
     fig = plt.figure(figsize = (10, 7))
     ax = plt.axes(projection ="3d")
 
-    # Creating plot
-    ax.scatter3D(KnPre, KnDet, KnPost, color = "orange", label = "KN population")
-    ax.scatter3D(MdPre, MdDet, MdPost, color = "blue", label = "MD population")
-    plt.title("Pre, Post and detection passband correlation")
-    plt.legend()
+    
+    for key in KnOccurrences:
+        ax.scatter3D(key[0], key[1], key[2], s = (KnOccurrences[key] / KnCount) * 10000, color =  'orange', alpha = 0.5, label = "KN population")
+    
+    for key in MdOccurrences:
+        ax.scatter3D(key[0], key[1], key[2], s = (MdOccurrences[key] / MdCount) * 10000, color =  'blue', alpha = 0.5, label = "MD population")
 
-    # show plot
+    ax.set_xlabel('Predetection passband')
+    ax.set_ylabel('Detection passband')
+    ax.set_zlabel('Post Detection passband')
     plt.show()
 
 dirToClassName = {
