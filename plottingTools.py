@@ -314,7 +314,6 @@ def plotAllObservationPassbandDistribution(path, listFile, isCompressed):
             for table in sim:
                 temp = np.array(table['BAND'], dtype=np.str)
                 passbands = np.concatenate([passbands, temp])   
-            break
 
     # Plotting code 
     passbands = sorted(passbands)
