@@ -295,6 +295,38 @@ def getPrePostAndDetectionPassbands(path, listFile, isCompressed):
                     count += 1
     return preDetectionPassband, detectionPassband, postDetectionPassband
 
+def plotAllObservationPassbandDistribution(path, listFile, isCompressed):
+
+    passbands = np.array([])
+
+    with open(path + listFile) as file:
+        for line in file:
+
+            headFile = path + line.rstrip()
+            photFile = headFile[:len(headFile) - 9] + 'PHOT.FITS'
+
+            if isCompressed:
+                headFile += '.gz'
+                photFile += '.gz'
+
+            sim = sncosmo.read_snana_fits(headFile, photFile)
+
+            for table in sim:
+                temp = np.array(table['BAND'], dtype=np.str)
+                passbands = np.concatenate([passbands, temp])   
+            break
+
+    # Plotting code 
+    passbands = sorted(passbands)
+
+    letter_counts = Counter(passbands)
+    df = pd.DataFrame.from_dict(letter_counts, orient='index')
+    df = df.reindex(['u ','g ','r ','i ','z ','Y '])
+    df.plot(kind='bar')
+
+    plt.title('Distribution of non detection and detection passbands ' + dirToClassName[path])
+    plt.show()
+
 def convertToNumbers(passbandArray):
     toReturn = []
     for band in passbandArray:
@@ -383,4 +415,7 @@ dirToClassName = {
 # plotPostDetectionPassbandConfusionMatrix('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
 # plotPostDetectionPassbandConfusionMatrix('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
 
-plotPrePost3dPlot()
+plotAllObservationPassbandDistribution('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
+# plotAllObservationPassbandDistribution('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
+
+# plotPrePost3dPlot()
