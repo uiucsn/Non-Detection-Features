@@ -116,7 +116,7 @@ class NDFeatureExtractor:
             
             # Time to next detection
             if i == len(idx) - 1:
-                # if it is the last detection, ignore next
+                # If it is the last detection, add a special value for next.
                 timeToNext.append(-1)
             else:
                 delta_time = self.dataFrame['MJD'][i + 1] - self.dataFrame['MJD'][i]
@@ -124,13 +124,36 @@ class NDFeatureExtractor:
 
             # Time to previous detection
             if i == 0:
-                # If it first detection, ignore previous
+                # If it is first detection, add a special value for previous.
                 timeToPrev.append(-1)
             else:
                 delta_time = self.dataFrame['MJD'][i] - self.dataFrame['MJD'][i - 1]
                 timeToPrev.append(delta_time)
 
         return timeToPrev, timeToNext
+
+    def plotInstance(self):
+        """
+        Plots the instance of the light curve from the FITS file. 
+        """
+
+        colors = self.passbandColors[self.survey]
+        colorArr = []
+        marker = []
+
+        # Creating an array of colors based on passband.
+        for passband in np.array(self.dataFrame['BAND'], dtype=np.str):
+            colorArr.append(colors[passband])
+
+        # Creating an array of markers based on whether the observation is a detection or not.
+        for det in self.dataFrame['PHOTFLAG']:
+            marker.append('o') if det == 0 else marker.append('^')
+
+        # Creating the scatter plot.
+        for i in range(len(self.dataFrame)):
+            plt.errorbar(self.dataFrame['MJD'][i], self.dataFrame['FLUXCAL'][i], yerr = self.dataFrame['FLUXCALERR'][i], fmt = marker[i], c = colorArr[i], label = self.dataFrame['BAND'][i])
+        
+        plt.show()
     
     def buildPseudoLightCurves(self, SNThreshold = 3):
 
@@ -151,26 +174,6 @@ class NDFeatureExtractor:
 
 
         return self.pseudoPassBandLightCurves
-
-    def plotInstance(self):
-
-        colors = self.passbandColors[self.survey]
-        colorArr = []
-        marker = []
-
-        # Creating an array of colors based on passband.
-        for passband in np.array(self.dataFrame['BAND'], dtype=np.str):
-            colorArr.append(colors[passband])
-
-        # Creating an array of markers based on whether the observation is a detection or not.
-        for det in self.dataFrame['PHOTFLAG']:
-            marker.append('o') if det == 0 else marker.append('^')
-
-        # Creating the scatter plot.
-        for i in range(len(self.dataFrame)):
-            plt.errorbar(self.dataFrame['MJD'][i], self.dataFrame['FLUXCAL'][i], yerr = self.dataFrame['FLUXCALERR'][i], fmt = marker[i], c = colorArr[i], label = self.dataFrame['BAND'][i])
-        
-        plt.show()
     
     def plotPseudoLightCurves(self, SNThreshold = 3):
 
