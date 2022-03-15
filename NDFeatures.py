@@ -117,7 +117,7 @@ class NDFeatureExtractor:
             # Time to next detection
             if i == len(idx) - 1:
                 # if it is the last detection, ignore next
-                timeToNext.append('')
+                timeToNext.append(-1)
             else:
                 delta_time = self.dataFrame['MJD'][i + 1] - self.dataFrame['MJD'][i]
                 timeToNext.append(delta_time)
@@ -125,7 +125,7 @@ class NDFeatureExtractor:
             # Time to previous detection
             if i == 0:
                 # If it first detection, ignore previous
-                timeToPrev.append('')
+                timeToPrev.append(-1)
             else:
                 delta_time = self.dataFrame['MJD'][i] - self.dataFrame['MJD'][i - 1]
                 timeToPrev.append(delta_time)
