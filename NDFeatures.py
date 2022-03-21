@@ -19,12 +19,17 @@ class NDFeatureExtractor:
         self.dataFrame['BAND'] = np.array(self.dataFrame['BAND'], dtype=np.str)
         self.survey = survey
             
-    def extractDetectionData(self):
+    def extractDetectionData(self, count = 1):
         """
         Returns a pandas dataframe with the detection, pre-dection and post-detection 
         passbands for all every detection in the FITS file along with the delta time 
         to the next detection (if any) and previous detection (if any). Maintains all
         the columns from the original FITS file but removes rows for non detections.
+
+        Args:
+            count (int): [Deafault = 1] Number of detections for which features should 
+            be extracted. If count is 2, the dataframe with features for the first two 
+            detections will be returned.
 
         Returns:
             Pandas data frame: Consists of the orignal data, passband data and delta
@@ -48,8 +53,9 @@ class NDFeatureExtractor:
         # Adding Delta T data to the DF
         detectionDataFrame['TIME-TO-PREV'] = timeToPrev
         detectionDataFrame['TIME-TO-NEXT'] = timeToNext
-
-        return detectionDataFrame
+        
+        # Returning sliced dataframe containing the correct number of detections.
+        return detectionDataFrame[:count]
 
     def getPrePostDetPB(self, idx):
         """
@@ -153,43 +159,6 @@ class NDFeatureExtractor:
         for i in range(len(self.dataFrame)):
             plt.errorbar(self.dataFrame['MJD'][i], self.dataFrame['FLUXCAL'][i], yerr = self.dataFrame['FLUXCALERR'][i], fmt = marker[i], c = colorArr[i], label = self.dataFrame['BAND'][i])
         
-        plt.show()
-    
-    def buildPseudoLightCurves(self, SNThreshold = 3):
-
-        dict = self.passbandColors[self.survey]
-
-        for band in dict.keys():
-
-            df = self.dataFrame[self.dataFrame['FLUXCAL'] / self.dataFrame['FLUXCALERR'] >= SNThreshold] 
-            df = df[df['BAND'].str.decode('utf-8') == band]
-
-            signal = df['FLUXCAL']
-            noise = df['FLUXCALERR']
-            time = df['MJD']
-
-            lc = lk.LightCurve(time = time, flux = signal, flux_err = noise)
-
-            self.pseudoPassBandLightCurves[band] = lc
-
-
-        return self.pseudoPassBandLightCurves
-    
-    def plotPseudoLightCurves(self, SNThreshold = 3):
-
-        self.buildPseudoLightCurves(SNThreshold=SNThreshold)
-
-        fig = plt.figure(figsize=(8, 6))
-        ax = fig.add_subplot()
-
-        for band in self.passbandColors[self.survey].keys():
-            lc = self.pseudoPassBandLightCurves[band]
-            if len(lc) > 0:
-                ax.errorbar(lc.time.to_value('mjd'), lc.flux.to_value(), yerr = self.pseudoPassBandLightCurves[band].flux_err.to_value(),  label = band, marker='o')
-        
-        plt.legend()
-        plt.xlabel('Time in MJD')
-        plt.ylabel('Flux')
         plt.show()
 
     features = {}
