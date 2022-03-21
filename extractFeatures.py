@@ -10,7 +10,8 @@ import sncosmo
 
 def extractFeaturesFromFITS(path, listFile, isCompressed):
     
-    dataFrames = []
+    # Storing the features from all the FITS files
+    features = []
 
     with open(path + listFile) as file:
         for line in file:
@@ -21,21 +22,22 @@ def extractFeaturesFromFITS(path, listFile, isCompressed):
             if isCompressed:
                 headFile += '.gz'
                 photFile += '.gz'
+            
+            # Collection of fits tables
+            sims = sncosmo.read_snana_fits(headFile, photFile)
 
-            sim = sncosmo.read_snana_fits(headFile, photFile)
-
-            for table in sim:
+            for table in sims:
 
                 fe = NDFeatures.NDFeatureExtractor(table, 'LSST')
 
                 detectionData = fe.extractDetectionData()
-                dataFrames.append(detectionData)
+                features.append(detectionData)
                 fe.plotInstance()
 
-    df = pd.concat(dataFrames)
+    # Creating one df from all the df's and saving it
+    df = pd.concat(features)
     df['CLASS'] = [dirToClassName[path]] * len(df)
     df.to_csv(f'{dirToClassName[path]}_features.csv')
-    print(df)
 
 dirToClassName = {
     'test_data/m-dwarf-flare-lightcurves/': 'M dwarf flares',
