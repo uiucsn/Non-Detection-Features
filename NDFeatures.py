@@ -1,30 +1,50 @@
 from turtle import pos
 import numpy as np
+import healpy as hp
 from numpy.core.defchararray import encode
 import pandas as pd
 import matplotlib.pyplot as plt
 from numpy.core.numeric import NaN
 import lightkurve as lk
+from astropy.coordinates import SkyCoord
+from astropy.coordinates import ICRS
+from astropy import units as u
+import astropy_healpix
+
 
 class NDFeatureExtractor:
 
     # Data for internal use.
+    NSIDE = 32
+
     passbandColors = {
         'LSST' : {'u ': 'tab:blue', 'g ': 'tab:orange', 'r ': 'tab:green', 'i ': 'tab:red', 'z ': 'tab:purple', 'Y ': 'tab:pink'},
     }
 
     def __init__(self, dataFrame, survey):
+        
+        # Storing the RA and DEC for the instance
+        self.ra = dataFrame.meta['RA']
+        self.dec = dataFrame.meta['DEC']
 
+        # Stroing as a pandas DF
         self.dataFrame = dataFrame.to_pandas()
         self.dataFrame['BAND'] = np.array(self.dataFrame['BAND'], dtype=np.str)
+
+        # Density distribution map for m dwarf flares
+        self.md_density_map = hp.read_map('m-dwarf-flare-density-1M-nside32.fits')
+
         self.survey = survey
+
+
             
     def extractDetectionData(self, count = 1):
         """
         Returns a pandas dataframe with the detection, pre-dection and post-detection 
-        passbands for all every detection in the FITS file along with the delta time 
-        to the next detection (if any) and previous detection (if any). Maintains all
-        the columns from the original FITS file but removes rows for non detections.
+        passbands for the first "count" detections in the FITS file along with the 
+        delta time to the next detection (if any) and previous detection (if any). 
+        Maintains all the columns from the original FITS file but removes rows for non 
+        detections.
 
         Args:
             count (int): [Deafault = 1] Number of detections for which features should 
@@ -57,10 +77,40 @@ class NDFeatureExtractor:
 
         # Adding the number of detections in the LC
         detectionDataFrame['NUM_DETECTIONS'] = self.getNumOfDetectionsInLC(idx)
+
+        # Adding the M dwarf flare density for the healpix pixel where the event occured
+        detectionDataFrame['MDF_DENSITY']  = self.getMDFlareDensity(idx)
         
         # Returning sliced dataframe containing the correct number of detections.
         return detectionDataFrame[:count]
     
+
+    def getMDFlareDensity(self, idx):
+        """
+        Returns a list of the same length as idx containing the density of M dwarf flares in 
+        the healpix pixel which contains our event, rendered with an NSIDE = 32.        
+
+        Args:
+            idx (numpy array): Indices of the detections in the FITS file.
+
+        Returns:
+            list: List containing the m dwarf density for the Healpix pixel containing the event
+            repeated len(idx) times.
+        """
+
+        # Converting the coordinates to the HELPIX pixel
+        coordinates = SkyCoord(ra = self.ra * u.deg, dec = self.dec * u.deg, frame=ICRS)
+        map = astropy_healpix.HEALPix(self.NSIDE, frame=ICRS, order="nested")
+        hp_index = map.skycoord_to_healpix(coordinates, return_offsets=False)
+        
+        # Finding the density of mdwarf in this pixel
+        pixel_prob = self.md_density_map[hp_index]
+
+        pixel_prob_list = [pixel_prob] * len(idx)
+
+        return pixel_prob_list
+
+
     def getNumOfDetectionsInLC(self, idx):
         """
         Returns a list with length equal to the number of detection containing the
@@ -80,7 +130,6 @@ class NDFeatureExtractor:
         return numberOfDetectionsColumns
 
 
-    
     def getNextObsPhotFlag(self, idx):
         """
         Returns a list with length equal to idx. If the next observation for a detection
@@ -157,6 +206,7 @@ class NDFeatureExtractor:
         
         return pre_det_pb, post_det_pb
     
+
     def getTimeBetweenDetections(self, idx):
         """
         Returns two lists containing the time to previous detection and time to next
@@ -194,6 +244,7 @@ class NDFeatureExtractor:
                 timeToPrev.append(delta_time)
 
         return timeToPrev, timeToNext
+
 
     def plotInstance(self):
         """

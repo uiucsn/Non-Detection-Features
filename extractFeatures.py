@@ -45,5 +45,5 @@ dirToClassName = {
 }
 
 if __name__== '__main__':
-    # extractFeaturesFromFITS('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
+    extractFeaturesFromFITS('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', True)
     extractFeaturesFromFITS('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', False)
