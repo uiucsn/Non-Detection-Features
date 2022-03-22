@@ -32,12 +32,12 @@ def extractFeaturesFromFITS(path, listFile, isCompressed):
 
                 detectionData = fe.extractDetectionData()
                 features.append(detectionData)
-                fe.plotInstance()
 
     # Creating one df from all the df's and saving it
     df = pd.concat(features)
     df['CLASS'] = [dirToClassName[path]] * len(df)
     df.to_csv(f'{dirToClassName[path]}_features.csv')
+    print(df)
 
 dirToClassName = {
     'test_data/m-dwarf-flare-lightcurves/': 'M dwarf flares',

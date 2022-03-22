@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 # Load data
 df_1 = pd.read_csv('Kilo Nova_features.csv')
-df_2 = pd.read_csv('MDF_features.csv')
+df_2 = pd.read_csv('M dwarf flares_features.csv')
 
 # Make the number of detections for the two classes equal
 df_2 = df_2[:len(df_1)]
