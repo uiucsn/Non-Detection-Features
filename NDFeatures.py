@@ -42,20 +42,55 @@ class NDFeatureExtractor:
 
         detectionDataFrame  = self.dataFrame.loc[idx, ]
 
-        # Extracting features
-        pre_det_pb, post_det_pb = self.getPrePostDetPB(idx)
-        timeToPrev, timeToNext = self.getTimeBetweenDetections(idx)
-
         # Adding PB data to the DF
+        pre_det_pb, post_det_pb = self.getPrePostDetPB(idx)
         detectionDataFrame['PRE-BAND'] = pre_det_pb
         detectionDataFrame['POST-BAND'] = post_det_pb
 
         # Adding Delta T data to the DF
+        timeToPrev, timeToNext = self.getTimeBetweenDetections(idx)
         detectionDataFrame['TIME-TO-PREV'] = timeToPrev
         detectionDataFrame['TIME-TO-NEXT'] = timeToNext
+
+        # Adding next obs phot flag to the DF
+        nextObsPhotFlag = self.getNextObsPhotFlag(idx)
+        detectionDataFrame['NEXT-PHOT-FLAG'] = nextObsPhotFlag
         
         # Returning sliced dataframe containing the correct number of detections.
         return detectionDataFrame[:count]
+    
+    def getNextObsPhotFlag(self, idx):
+        """
+        Returns a list with length equal to idx. If the next observation for a detection
+        from idx is also a detection, the value will be 1. Otherwise, the value will be 
+        0.
+
+        Args:
+            idx (numpy array): Indices of the detections in the FITS file.
+
+        Returns:
+            list : List containing binary values relating to the next observations PHOT 
+            FLAG.
+        """
+
+        nextObsPhotFlag = []
+
+        for i in idx:
+
+            next_index = i + 1
+
+            # Adding post detection flag if it exists
+            if next_index >= len(self.dataFrame):
+                nextObsPhotFlag.append(0)
+            else:
+                flag = self.dataFrame['PHOTFLAG'][next_index]
+                if flag != 0:
+                    nextObsPhotFlag.append(1)
+                else:
+                    nextObsPhotFlag.append(0)
+
+        return nextObsPhotFlag
+            
 
     def getPrePostDetPB(self, idx):
         """
