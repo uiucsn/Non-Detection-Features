@@ -53,11 +53,33 @@ class NDFeatureExtractor:
         detectionDataFrame['TIME-TO-NEXT'] = timeToNext
 
         # Adding next obs phot flag to the DF
-        nextObsPhotFlag = self.getNextObsPhotFlag(idx)
-        detectionDataFrame['NEXT-PHOT-FLAG'] = nextObsPhotFlag
+        detectionDataFrame['NEXT-PHOT-FLAG'] = self.getNextObsPhotFlag(idx)
+
+        # Adding the number of detections in the LC
+        detectionDataFrame['NUM_DETECTIONS'] = self.getNumOfDetectionsInLC(idx)
         
         # Returning sliced dataframe containing the correct number of detections.
         return detectionDataFrame[:count]
+    
+    def getNumOfDetectionsInLC(self, idx):
+        """
+        Returns a list with length equal to the number of detection containing the
+        number of detections in the LC. Consequently, all the values in the list 
+        will have the same value.
+
+        Args:
+            idx (numpy array): Indices of the detections in the FITS file.
+
+        Returns:
+            list: List containing the number of detections in the LC, repeated len(idx)
+            times.
+        """
+
+        numDetections = len(idx)
+        numberOfDetectionsColumns = [numDetections] * numDetections 
+        return numberOfDetectionsColumns
+
+
     
     def getNextObsPhotFlag(self, idx):
         """
