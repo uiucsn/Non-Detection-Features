@@ -161,7 +161,3 @@ class NDFeatureExtractor:
         
         plt.show()
 
-    features = {}
-
-    # Storage for the pseudo light curves
-    pseudoPassBandLightCurves = {}
