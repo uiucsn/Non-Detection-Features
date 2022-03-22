@@ -14,12 +14,22 @@ import astropy_healpix
 
 class NDFeatureExtractor:
 
-    # Data for internal use.
+    # 1. Data for internal use:
+
+    ############################
+
+    # NSIDE of the MDF map
     NSIDE = 32
 
+    # Healpix index of the pixel that contains our event, rendered at NSIDE
+    HEALPIX_INDEX = -1
+
+    # Colors for the plots
     passbandColors = {
         'LSST' : {'u ': 'tab:blue', 'g ': 'tab:orange', 'r ': 'tab:green', 'i ': 'tab:red', 'z ': 'tab:purple', 'Y ': 'tab:pink'},
     }
+
+    ############################
 
     def __init__(self, dataFrame, survey):
         
@@ -37,7 +47,6 @@ class NDFeatureExtractor:
         self.survey = survey
 
 
-            
     def extractDetectionData(self, count = 1):
         """
         Returns a pandas dataframe with the detection, pre-dection and post-detection 
@@ -101,10 +110,10 @@ class NDFeatureExtractor:
         # Converting the coordinates to the HELPIX pixel
         coordinates = SkyCoord(ra = self.ra * u.deg, dec = self.dec * u.deg, frame=ICRS)
         map = astropy_healpix.HEALPix(self.NSIDE, frame=ICRS, order="nested")
-        hp_index = map.skycoord_to_healpix(coordinates, return_offsets=False)
+        self.HEALPIX_INDEX = map.skycoord_to_healpix(coordinates, return_offsets=False)
         
         # Finding the density of mdwarf in this pixel
-        pixel_prob = self.md_density_map[hp_index]
+        pixel_prob = self.md_density_map[self.HEALPIX_INDEX]
 
         pixel_prob_list = [pixel_prob] * len(idx)
 
