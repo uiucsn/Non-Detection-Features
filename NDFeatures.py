@@ -31,18 +31,21 @@ class NDFeatureExtractor:
 
     ############################
 
-    def __init__(self, dataFrame, survey):
+    def __init__(self, dataFrame, skyMap, survey):
         
         # Storing the RA and DEC for the instance
         self.ra = dataFrame.meta['RA']
         self.dec = dataFrame.meta['DEC']
+
+        # Storing the skyMap
+        self.skyMap = skyMap
 
         # Stroing as a pandas DF
         self.dataFrame = dataFrame.to_pandas()
         self.dataFrame['BAND'] = np.array(self.dataFrame['BAND'], dtype=np.str)
 
         # Density distribution map for m dwarf flares
-        self.md_density_map = hp.read_map('m-dwarf-flare-density-1M-nside32.fits')
+        self.md_density_map = hp.read_map('data/m-dwarf-flare-density-1M-nside32.fits')
 
         self.survey = survey
 
@@ -90,6 +93,9 @@ class NDFeatureExtractor:
         # Adding the M dwarf flare density for the healpix pixel where the event occured
         detectionDataFrame['MDF_DENSITY']  = self.getMDFlareDensity(idx)
         
+        # Adding the GW probability for the healpix pixel where the event occured
+        detectionDataFrame['GW_PROB'] = self.getGravitationalWaveProbability(idx)
+        
         # Returning sliced dataframe containing the correct number of detections.
         return detectionDataFrame[:count]
     
@@ -110,10 +116,10 @@ class NDFeatureExtractor:
         # Converting the coordinates to the HELPIX pixel
         coordinates = SkyCoord(ra = self.ra * u.deg, dec = self.dec * u.deg, frame=ICRS)
         map = astropy_healpix.HEALPix(self.NSIDE, frame=ICRS, order="nested")
-        self.HEALPIX_INDEX = map.skycoord_to_healpix(coordinates, return_offsets=False)
+        healpix_index = map.skycoord_to_healpix(coordinates, return_offsets=False)
         
         # Finding the density of mdwarf in this pixel
-        pixel_prob = self.md_density_map[self.HEALPIX_INDEX]
+        pixel_prob = self.md_density_map[healpix_index]
 
         pixel_prob_list = [pixel_prob] * len(idx)
 
@@ -254,6 +260,31 @@ class NDFeatureExtractor:
 
         return timeToPrev, timeToNext
 
+    def getGravitationalWaveProbability(self, idx):
+        """
+        Returns a list of the same length as idx containing the probability of GW event in the 
+        the healpix pixel which contains our event, rendered with an NSIDE = 32.        
+
+        Args:
+            idx (numpy array): Indices of the detections in the FITS file.
+
+        Returns:
+            list: List containing the GW probability for the Healpix pixel containing the event
+            repeated len(idx) times.
+        """
+
+        # Converting the coordinates to the HELPIX pixel
+        coordinates = SkyCoord(ra = self.ra * u.deg, dec = self.dec * u.deg, frame=ICRS)
+        map = astropy_healpix.HEALPix(self.NSIDE, frame=ICRS, order="nested")
+        healpix_index = map.skycoord_to_healpix(coordinates, return_offsets=False)
+
+        # Finding the GW probability associated with the pixel
+        prob = self.skyMap["PROB"][healpix_index]
+
+        # Creating a list with repeated value
+        probability_list = [prob] * len(idx)
+
+        return probability_list
 
     def plotInstance(self):
         """
