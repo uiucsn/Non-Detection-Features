@@ -32,7 +32,7 @@ def extractFeaturesFromFITS(path, listFile, skyMapPath, isCompressed):
 
             for table in sims:
 
-                fe = NDFeatures.NDFeatureExtractor(table, skyMap, 'LSST')
+                fe = NDFeatures.NDFeatureExtractor(table, skyMap, 0, 'LSST')
 
                 detectionData = fe.extractDetectionData()
                 features.append(detectionData)

@@ -21,9 +21,6 @@ class NDFeatureExtractor:
     # NSIDE of the MDF map
     NSIDE = 32
 
-    # Healpix index of the pixel that contains our event, rendered at NSIDE
-    HEALPIX_INDEX = -1
-
     # Colors for the plots
     passbandColors = {
         'LSST' : {'u ': 'tab:blue', 'g ': 'tab:orange', 'r ': 'tab:green', 'i ': 'tab:red', 'z ': 'tab:purple', 'Y ': 'tab:pink'},
@@ -31,7 +28,7 @@ class NDFeatureExtractor:
 
     ############################
 
-    def __init__(self, dataFrame, skyMap, survey):
+    def __init__(self, dataFrame, skyMap, triggerTime, survey):
         
         # Storing the RA and DEC for the instance
         self.ra = dataFrame.meta['RA']
@@ -39,6 +36,9 @@ class NDFeatureExtractor:
 
         # Storing the skyMap
         self.skyMap = skyMap
+
+        # Storing the trigger time
+        self.triggerTime = triggerTime
 
         # Stroing as a pandas DF
         self.dataFrame = dataFrame.to_pandas()
@@ -72,7 +72,11 @@ class NDFeatureExtractor:
         boolArray = self.dataFrame['PHOTFLAG'] != 0
         idx = np.where(boolArray)[0]
 
-        detectionDataFrame  = self.dataFrame.loc[idx, ]
+        # Getting the detection passbands from the datafram
+        d = {'BAND': self.dataFrame['BAND'][idx]}
+
+        #  Creating a database from the detection passband
+        detectionDataFrame  = pd.DataFrame(data=d)
 
         # Adding PB data to the DF
         pre_det_pb, post_det_pb = self.getPrePostDetPB(idx)
@@ -95,6 +99,9 @@ class NDFeatureExtractor:
         
         # Adding the GW probability for the healpix pixel where the event occured
         detectionDataFrame['GW_PROB'] = self.getGravitationalWaveProbability(idx)
+
+        # Adding the time of first detection from the GW trigger time.
+        detectionDataFrame['TIME_FROM_GW_TRIGGER'] = self.getTimeOfFirstDetFromGwTrigger(idx)
         
         # Returning sliced dataframe containing the correct number of detections.
         return detectionDataFrame[:count]
@@ -260,6 +267,7 @@ class NDFeatureExtractor:
 
         return timeToPrev, timeToNext
 
+
     def getGravitationalWaveProbability(self, idx):
         """
         Returns a list of the same length as idx containing the probability of GW event in the 
@@ -285,6 +293,32 @@ class NDFeatureExtractor:
         probability_list = [prob] * len(idx)
 
         return probability_list
+
+    
+    def getTimeOfFirstDetFromGwTrigger(self, idx):
+        """
+        Returns a list of the same length as idx containing the delta time of the first detection
+        from the GW trigger time in days.
+
+        Args:
+            idx (numpy array): Indices of the detections in the FITS file.  
+
+        Returns:
+            list: List containing the delta time of the first detection from the GW trigger time 
+            in days repeated len(idx) times.
+        """
+
+        # Finding the time of the first detection
+        firstDetIndex = idx[0]
+        firstDetTime = self.dataFrame['MJD'][firstDetIndex]
+
+        # Finding time delta between GW trigger time and first detection.
+        timeDelta =  firstDetTime - self.triggerTime
+
+        timeDeltaList = [timeDelta] * len(idx)
+
+        return timeDeltaList
+
 
     def plotInstance(self):
         """
