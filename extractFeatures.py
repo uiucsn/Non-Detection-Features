@@ -44,10 +44,10 @@ def extractFeaturesFromFITS(path, listFile, skyMapPath, isCompressed):
     print(df)
 
 dirToClassName = {
-    'test_data/m-dwarf-flare-lightcurves/': 'M dwarf flares',
-    'test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/': 'Kilo Nova',
+    'test_data/m-dwarf-flare-lightcurves/': 'MDF',
+    'test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/': 'KN',
 }
 
 if __name__== '__main__':
-    #extractFeaturesFromFITS('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', 'bayestar.singleorder.FITS', True)
+    extractFeaturesFromFITS('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', 'bayestar.singleorder.FITS', True)
     extractFeaturesFromFITS('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', 'bayestar.singleorder.FITS', False)

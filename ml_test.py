@@ -1,5 +1,5 @@
 from xml.etree.ElementInclude import include
-from matplotlib.pyplot import cla
+from matplotlib.pyplot import axis, cla
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.datasets import make_classification
 from sklearn.model_selection import train_test_split
@@ -12,8 +12,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Load data
-df_1 = pd.read_csv('Features/Kilo Nova_features.csv')
-df_2 = pd.read_csv('Features/M dwarf flares_features.csv')
+df_1 = pd.read_csv('KN_features.csv')
+df_2 = pd.read_csv('MDF_features.csv')
 
 # Make the number of detections for the two classes equal
 df_2 = df_2[:len(df_1)]
@@ -21,37 +21,37 @@ df_2 = df_2[:len(df_1)]
 # Merge the dataframs
 df = pd.concat([df_1,df_2])
 
+print(df)
+
 # Make the matrices
-x = df[['BAND','PRE-BAND','POST-BAND']]
+x = df.drop(['CLASS'], axis=1)
 y = df[['CLASS']]
 
 # One hot encoding for passband features
 enc = OneHotEncoder(sparse=False)
-x = enc.fit_transform(x)
+x_enc = enc.fit_transform(x[['BAND', 'PRE-BAND','POST-BAND']])
 
-# Adding the time to prev and next det as features
-x_new = np.zeros((len(df), 22))
-x_new[:, :20] = x
-x_new[:, 20] = df['TIME-TO-PREV']
-x_new[:, 21] = df['TIME-TO-NEXT']
-
+# Getting encodded feature list
 features = list(enc.get_feature_names_out())
-features.append('TIME-TO-PREV')
-features.append('TIME-TO-NEXT')
 
-x_new = pd.DataFrame(x_new, columns=features)
+# Creating the data frame for the encoded data
+x_enc = pd.DataFrame(x_enc, columns=features)
 
-x = x_new
+# Dropping the encodded data
+x = x.drop(['BAND', 'PRE-BAND','POST-BAND'], axis=1)
 
-print(x_new)
+# Joining the encoded data with the other features
+x = x_enc.merge(x, left_index=True, right_index=True)
+
 
 # Creating binary class column 
 y = []
 for c in df['CLASS']:
-    if c == 'Kilo Nova':
+    if c == 'KN':
         y.append(0)
     else:
         y.append(1)
+
 
 # Splitting data
 X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.3)

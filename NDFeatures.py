@@ -16,8 +16,6 @@ class NDFeatureExtractor:
 
     # 1. Data for internal use:
 
-    ############################
-
     # NSIDE of the MDF map
     NSIDE = 32
 
@@ -75,36 +73,41 @@ class NDFeatureExtractor:
         # Getting the detection passbands from the datafram
         d = {'BAND': self.dataFrame['BAND'][idx]}
 
-        #  Creating a database from the detection passband
-        detectionDataFrame  = pd.DataFrame(data=d)
+        #  Creating a dataframe to store the features.
+        featuresDataFrame  = pd.DataFrame(data=d)
 
         # Adding PB data to the DF
         pre_det_pb, post_det_pb = self.getPrePostDetPB(idx)
-        detectionDataFrame['PRE-BAND'] = pre_det_pb
-        detectionDataFrame['POST-BAND'] = post_det_pb
+        featuresDataFrame['PRE-BAND'] = pre_det_pb
+        featuresDataFrame['POST-BAND'] = post_det_pb
 
         # Adding Delta T data to the DF
         timeToPrev, timeToNext = self.getTimeBetweenDetections(idx)
-        detectionDataFrame['TIME-TO-PREV'] = timeToPrev
-        detectionDataFrame['TIME-TO-NEXT'] = timeToNext
+        featuresDataFrame['TIME-TO-PREV'] = timeToPrev
+        featuresDataFrame['TIME-TO-NEXT'] = timeToNext
 
         # Adding next obs phot flag to the DF
-        detectionDataFrame['NEXT-PHOT-FLAG'] = self.getNextObsPhotFlag(idx)
+        featuresDataFrame['NEXT-PHOT-FLAG'] = self.getNextObsPhotFlag(idx)
 
         # Adding the number of detections in the LC
-        detectionDataFrame['NUM_DETECTIONS'] = self.getNumOfDetectionsInLC(idx)
+        featuresDataFrame['NUM_DETECTIONS'] = self.getNumOfDetectionsInLC(idx)
 
         # Adding the M dwarf flare density for the healpix pixel where the event occured
-        detectionDataFrame['MDF_DENSITY']  = self.getMDFlareDensity(idx)
+        featuresDataFrame['MDF_DENSITY']  = self.getMDFlareDensity(idx)
         
         # Adding the GW probability for the healpix pixel where the event occured
-        detectionDataFrame['GW_PROB'] = self.getGravitationalWaveProbability(idx)
+        featuresDataFrame['GW_PROB'] = self.getGravitationalWaveProbability(idx)
 
         # Adding the time of first detection from the GW trigger time.
-        detectionDataFrame['TIME_FROM_GW_TRIGGER'] = self.getTimeOfFirstDetFromGwTrigger(idx)
+        featuresDataFrame['TIME_FROM_GW_TRIGGER'] = self.getTimeOfFirstDetFromGwTrigger(idx)
+
+        # Adding the ratio of detections in each passband
+        ratios = self.getDetectionPassbandRatio(idx)
+        for key in ratios:
+            featuresDataFrame[key] = ratios[key]
         
         # Returning sliced dataframe containing the correct number of detections.
-        return detectionDataFrame[:count]
+        return featuresDataFrame[:count]
     
 
     def getMDFlareDensity(self, idx):
@@ -188,18 +191,18 @@ class NDFeatureExtractor:
     def getPrePostDetPB(self, idx):
         """
         Returns two lists containing the pre - detection and post - detection passbands 
-        for every detection in the FITS file. 
+        for every detection in the FITS file. The pre and post detection passbands can 
+        be from a detection or non detection. The entry is None if there is no observation
+        (detection or non detection) adjacent to the detection.
 
         Args:
             idx (numpy array): Indices of the detections in the FITS file.
 
         Returns:
             List : pre_det_pb - list containing the pre - detection passbands for all 
-            detections. The entry is an empty string if there is no non detection before 
-            the detection.
+            detections.
             List : post_det_pb - list containing the post - detection passbands for all 
-            detections. The entry is an empty string if there is no non detection after 
-            the detection.
+            detections.
         """
 
         # Predetection observations.
@@ -239,8 +242,8 @@ class NDFeatureExtractor:
 
         Returns:
             List: timeToPrev - Contains the time to previous detection. Value is
-            None if there is no previous detection.
-            List: timeToNext - Contains the time to next detection. Value is None
+            -1 if there is no previous detection.
+            List: timeToNext - Contains the time to next detection. Value is -1
             if there is no previous detection.
         """
 
@@ -319,6 +322,38 @@ class NDFeatureExtractor:
 
         return timeDeltaList
 
+
+    def getDetectionPassbandRatio(self, idx):
+        """
+        Returns a dictionary containing the ration of detections in each passband for the survey.
+        The key is the passband and the value is a list containg the ratio of detections that 
+        have occured in that passband, repeated len(idx) times.     
+
+        Args:
+            idx (numpy array): Indices of the detections in the FITS file.  
+
+        Returns:
+            dictionary: Dictionary with passband as the key and list containg the ratio of detections 
+            that have occured in that passband, repeated len(idx) times as the value.  
+        """
+
+        ratios = {}
+
+        # Initializing count of all passbands to 0
+        for key in self.passbandColors[self.survey]:
+            ratios[f'{key.strip()}_ratio'] = 0
+
+        # Counting the number of detections in each passband
+        for i in idx:
+            passband = self.dataFrame['BAND'][i]
+            ratios[f'{passband.strip()}_ratio'] += 1
+        
+        # Dividing each count by the total number of detections and creating a list.
+        for key in ratios:
+            ratios[key] /= len(idx)
+            ratios[key] = [ratios[key]] * len(idx)
+
+        return ratios
 
     def plotInstance(self):
         """
