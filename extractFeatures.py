@@ -1,53 +1,38 @@
-from datetime import time
-from numpy.core.defchararray import less_equal
-import matplotlib.pyplot as plt
-import numpy as np
-import NDFeatures
-from collections import Counter
 import pandas as pd
-import sncosmo
-from astropy.table import Table
+import os
+from multiprocessing import Pool
 
+mappings_bulla = pd.read_csv('test_data/MDF_VS_KN-KilonovaSims/Bulla/SNID_TO_SKYMAP.csv')
+mappings_kasen = pd.read_csv('test_data/MDF_VS_KN-KilonovaSims/Kasen/SNID_TO_SKYMAP.csv')
 
-def extractFeaturesFromFITS(path, listFile, skyMapPath, isCompressed):
+def bulla_extract(i):
+
+    print(f'Starting {i} out of {len(mappings_bulla)}')
+    SNID = mappings_bulla['SNID'][i]
+    output = f'Bulla_features/{SNID}.csv'
+    skymap_path = f'test_data/MDF_VS_KN-KilonovaSims/Bulla/Bulla-Skymaps-Singleorder/{SNID}.singleorder.fits'
     
-    # Opening the GW skyMap
-    skyMap = Table.read(skyMapPath)
+    os.system(f'python localize_flares.py {SNID} {skymap_path} {output} Bulla')
+    print(f'Finished {i} out of {len(mappings_bulla)}')
 
-    # Storing the features from all the FITS files
-    features = []
+def kasen_extract(i):
 
-    with open(path + listFile) as file:
-        for line in file:
+    print(f'Starting {i} out of {len(mappings_kasen)}')
+    SNID = mappings_kasen['SNID'][i]
+    output = f'Kasen_features/{SNID}.csv'
+    skymap_path = f'test_data/MDF_VS_KN-KilonovaSims/Kasen/Kasen-Skymaps-Singleorder/{SNID}.singleorder.fits'
+    
+    os.system(f'python localize_flares.py {SNID} {skymap_path} {output} Kasen')
+    print(f'Finished {i} out of {len(mappings_kasen)}')
 
-            headFile = path + line.rstrip()
-            photFile = headFile[:len(headFile) - 9] + 'PHOT.FITS'
+if __name__ == '__main__':
 
-            if isCompressed:
-                headFile += '.gz'
-                photFile += '.gz'
-            
-            # Collection of fits tables
-            sims = sncosmo.read_snana_fits(headFile, photFile)
+    # print('Extracting features for Bulla sims...')
+    # pool1 = Pool(os.cpu_count())
+    # result = pool1.map(bulla_extract, range(len(mappings_bulla)))
 
-            for table in sims:
+    print('Extracting features for Kasen sims...')
+    pool2 = Pool(os.cpu_count())
+    result = pool2.map(kasen_extract, range(len(mappings_kasen)))
 
-                fe = NDFeatures.NDFeatureExtractor(table, skyMap, 0, 'LSST')
-
-                detectionData = fe.extractDetectionData()
-                features.append(detectionData)
-
-    # Creating one df from all the df's and saving it
-    df = pd.concat(features)
-    df['CLASS'] = [dirToClassName[path]] * len(df)
-    df.to_csv(f'{dirToClassName[path]}_features.csv')
-    print(df)
-
-dirToClassName = {
-    'test_data/m-dwarf-flare-lightcurves/': 'MDF',
-    'test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/': 'KN',
-}
-
-if __name__== '__main__':
-    extractFeaturesFromFITS('test_data/m-dwarf-flare-lightcurves/','LSST_WFD_MODEL66_Mdwarf.LIST', 'bayestar.singleorder.FITS', True)
-    extractFeaturesFromFITS('test_data/kasen-kilonova-lightcurves/DC_LSST_MODEL_KN17_WITH_HOST_EXT/', 'DC_LSST_MODEL_KN17_WITH_HOST_EXT.LIST', 'bayestar.singleorder.FITS', False)
+    print('Done!')

@@ -30,21 +30,21 @@ enc = OneHotEncoder(sparse=False)
 x = enc.fit_transform(x)
 
 # Adding the time to prev and next det as features
-x_new = np.zeros((len(df), 25))
+x_new = np.zeros((len(df), 23))
 x_new[:, :20] = x
 x_new[:, 20] = df['TIME-TO-PREV']
 x_new[:, 21] = df['TIME-TO-NEXT']
 x_new[:, 22] = df['MDF_DENSITY']
-x_new[:, 23] = df['NEXT-PHOT-FLAG']
-x_new[:, 24] = df['NUM_DETECTIONS']
+# x_new[:, 23] = df['NEXT-PHOT-FLAG']
+# x_new[:, 24] = df['NUM_DETECTIONS']
 
 
 features = list(enc.get_feature_names_out())
 features.append('TIME-TO-PREV')
 features.append('TIME-TO-NEXT')
 features.append('MDF_DENSITY')
-features.append('NEXT-PHOT-FLAG')
-features.append('NUM_DETECTIONS')
+# features.append('NEXT-PHOT-FLAG')
+# features.append('NUM_DETECTIONS')
 
 x_new = pd.DataFrame(x_new, columns=features)
 
@@ -61,10 +61,10 @@ for c in df['CLASS']:
         y.append(1)
 
 # Splitting data
-X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.3)
+X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
 
 # Classifier
-clf=RandomForestClassifier(n_estimators=1000)
+clf=RandomForestClassifier(n_estimators=1000, random_state=42)
 
 clf.fit(X_train,y_train)
 y_pred=clf.predict(X_test)
@@ -76,7 +76,7 @@ cm = confusion_matrix(y_test, y_pred, labels=clf.classes_)
 
 importance = clf.feature_importances_
 
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=clf.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Kilo Nova', 'M Dwarf flare'])
 disp.plot()
 plt.show()
 
