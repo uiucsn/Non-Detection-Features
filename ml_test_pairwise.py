@@ -109,13 +109,24 @@ kasen_train = pd.concat(kasen_features[:kasen_train_size])
 kasen_test = pd.concat(kasen_features[kasen_train_size:])
 
 
-
 complete_training_set = pd.concat([kasen_train, bulla_train])
-complete_training_set = complete_training_set.drop_duplicates(subset=['SNID'])
-print(complete_training_set)
 
 # Removing duplicate SNID. Happens because flares can be in the sky maps for multiple KN's
 complete_training_set = complete_training_set.drop_duplicates(subset=['SNID'])
+
+
+all_SNID = complete_training_set['SNID']
+
+# SNID of m dwarf flares only
+mdf_SNID = complete_training_set[complete_training_set['CLASS'] == 'MDF']['SNID']
+
+# Use the last 20 % of flare SNID just for validating
+test_SNID = mdf_SNID[int(0.8 * len(mdf_SNID)):]
+
+# Remove any SNID's used for testing from the training set
+complete_training_set = complete_training_set[complete_training_set.SNID.isin(test_SNID) == False]
+
+train_SNID = complete_training_set['SNID']
 
 # Make the matrices
 x = complete_training_set[['BAND','PRE-BAND','POST-BAND']]
@@ -133,6 +144,8 @@ weights = {
     1:0.05  # MDF
 }
 
+
+
 print('Fitting model')
 clf=RandomForestClassifier(n_estimators=1000, random_state=42, class_weight=weights)
 clf.fit(x_train, y_train['CLASS'])
@@ -144,6 +157,8 @@ total_bulla = 0
 found_kn_bulla = 0
 
 for table in bulla_features[bulla_train_size:]:
+
+    table = table[table.SNID.isin(train_SNID) == False]
 
     test_x, test_y = getEncodedData(table, enc)
     probs = clf.predict_proba(test_x)
@@ -191,6 +206,8 @@ total_kasen = 0
 found_kn_kasen = 0
 
 for table in kasen_features[kasen_train_size:]:
+
+    table = table[table.SNID.isin(train_SNID) == False]
 
     test_x, test_y = getEncodedData(table, enc)
     probs = clf.predict_proba(test_x)
