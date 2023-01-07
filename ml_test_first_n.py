@@ -145,80 +145,77 @@ weights = {
 }
 
 
-
 print('Fitting model')
 clf=RandomForestClassifier(n_estimators=1000, random_state=42, class_weight=weights)
 clf.fit(x_train, y_train['CLASS'])
 
-full_true_bulla = np.array([])
-full_pred_bulla = np.array([])
+n_max = 50
 
-total_bulla = 0
-found_kn_bulla = 0
+bulla_fractions = []
+kasen_fractions = []
+n_values = []
 
-for table in bulla_features[bulla_train_size:]:
 
-    table = table[table.SNID.isin(train_SNID) == False]
+for n in range(1, n_max + 1):
 
-    test_x, test_y = getEncodedData(table, enc)
-    probs = clf.predict_proba(test_x)
+    total_bulla = 0
+    found_kn_bulla = 0
 
-    y_pred = clf.predict(test_x)
+    for table in bulla_features[bulla_train_size:]:
 
-    if y_pred[0] == 0 and test_y['CLASS'][0] == 0:
-        found_kn_bulla += 1
+        table = table[table.SNID.isin(train_SNID) == False]
 
-    full_true_bulla = np.append(full_true_bulla, test_y['CLASS'])
-    full_pred_bulla = np.append(full_pred_bulla, y_pred)
+        test_x, test_y = getEncodedData(table, enc)
+        probs_kn = clf.predict_proba(test_x)[:, 1]
 
-    total_bulla += 1
+        # Sort by prob of being a KN and get the first 5 indices
+        idx = np.argsort(probs_kn)[:min(n, len(probs_kn))]
+        sorted_probs = probs_kn[idx]
 
-#print("Accuracy:",metrics.accuracy_score(test_y, y_pred))
-cm = confusion_matrix(full_true_bulla, full_pred_bulla, labels=clf.classes_)
+        y_true = test_y['CLASS'][idx]
 
-importance = clf.feature_importances_
+        # Check if the KN exists in the top n candidates
+        if 0 in y_true:
+            found_kn_bulla += 1
 
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Kilo Nova', 'M Dwarf flare'])
-disp.plot()
-plt.title('Testing for Bulla simulations')
+        total_bulla += 1
+
+
+    print(f'Found {found_kn_bulla} out of {total_bulla} kilo nova when n = {n}.')
+
+
+    total_kasen = 0
+    found_kn_kasen = 0
+
+    for table in kasen_features[kasen_train_size:]:
+
+        table = table[table.SNID.isin(train_SNID) == False]
+
+        test_x, test_y = getEncodedData(table, enc)
+        probs_kn = clf.predict_proba(test_x)[:, 1]
+
+        # Sort by prob of being a KN and get the first 5 indices
+        idx = np.argsort(probs_kn)[:min(n, len(probs_kn))]
+        sorted_probs = probs_kn[idx]
+
+        y_true = test_y['CLASS'][idx]
+
+        # Check if the KN exists in the top n candidates
+        if 0 in y_true:
+            found_kn_kasen += 1
+
+        total_kasen += 1
+
+    print(f'Found {found_kn_kasen} out of {total_kasen} kilo nova when n = {n}.')
+
+    n_values.append(n)
+    bulla_fractions.append(found_kn_bulla/total_bulla)
+    kasen_fractions.append(found_kn_kasen/total_kasen)
+
+
+plt.plot(n_values, bulla_fractions, label='Bulla')
+plt.plot(n_values, kasen_fractions, label='Kasen')
+plt.ylabel('Fraction of KN found')
+plt.xlabel('Maximum number of candidates considered')
+plt.legend()
 plt.show()
-
-print(f'Found {found_kn_bulla} out of {total_bulla} kilo nova.')
-
-
-
-
-full_true_kasen = np.array([])
-full_pred_kasen = np.array([])
-
-total_kasen = 0
-found_kn_kasen = 0
-
-for table in kasen_features[kasen_train_size:]:
-
-    table = table[table.SNID.isin(train_SNID) == False]
-
-    test_x, test_y = getEncodedData(table, enc)
-    probs = clf.predict_proba(test_x)
-
-    y_pred = clf.predict(test_x)
-
-    if y_pred[0] == 0 and test_y['CLASS'][0] == 0:
-        found_kn_kasen += 1
-
-    full_true_kasen = np.append(full_true_kasen, test_y['CLASS'])
-    full_pred_kasen = np.append(full_pred_kasen, y_pred)
-
-    total_kasen += 1
-
-#print("Accuracy:",metrics.accuracy_score(test_y, y_pred))
-cm = confusion_matrix(full_true_kasen, full_pred_kasen, labels=clf.classes_)
-
-importance = clf.feature_importances_
-
-disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Kilo Nova', 'M Dwarf flare'])
-disp.plot()
-plt.title('Testing for Kasen simulations')
-plt.show()
-
-print(f'Found {found_kn_kasen} out of {total_kasen} kilo nova.')
